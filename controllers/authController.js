@@ -20,6 +20,8 @@ exports.addUser = async (req, res, next) => {
         .status(200)
         .json({ success: true, data: userPresent[0], token: userDetails });
     } else {
+
+      
       // sign up
       const newUser = new User({
         name: decodedUser.name,
@@ -41,6 +43,7 @@ exports.addUser = async (req, res, next) => {
     res.json({
       success: false,
       data: error,
+      user:decodedUser
     });
   }
 };
