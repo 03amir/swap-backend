@@ -43,7 +43,7 @@ exports.addUser = async (req, res, next) => {
     res.json({
       success: false,
       data: error,
-      user:decodedUser
+      user:jwt_decode(req.body.userDetails)
     });
   }
 };
