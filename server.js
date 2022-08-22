@@ -18,7 +18,7 @@ app.use(productRouter)
 const authRouter = require("./router/authRouter");
 app.use(authRouter)
 
-const PORT = process.env.PORT ||  8000;
+const PORT = process.env.PORT;
 
 app.get("/",(req,res)=>{
     res.send("GET from the home page")
