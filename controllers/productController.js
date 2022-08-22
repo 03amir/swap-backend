@@ -1,3 +1,4 @@
+const { json } = require("express");
 const Product = require("../models/productModel");
 
 exports.addProduct = async (req, res) => {
@@ -40,22 +41,80 @@ exports.addProduct = async (req, res) => {
   }
 };
 
-exports.getAllProducts = async (req, res) => {
+
+exports.getAllProducts = async (req, res, next) => {
   try {
-    const allProducts = await Product.find({});
-    // console.log(req.query)
+    //filtering in basis of the query
+    const queries = { ...req.query };
+
+    const search = req.query.search || "";
+
+    let tag = req.query.category;
+
+    const  limit = parseInt(req.query.limit) || 10;
+
+    const page = parseInt(req.query.page)-1 || 0;
+
+    const removableFeilds = ["sort", "search", "limit","category"];
+
+    removableFeilds.forEach((val) => {
+      delete queries[val];
+    });
+
+    let queryString = JSON.stringify(queries);
+
+    // replacing all the feilds as mongoos accepts
+    queryString = queryString.replace(/gt|gte|lt|lte|in/gi, function (x) {
+      return `$${x}`;
+    });
+
+    let jsonstring = JSON.parse(queryString);
+
+    let queryProducts;
+
+    if (tag === "all") {
+      queryProducts = Product.find({$and:[{title: { $regex: search, $options: "i" }},jsonstring]})
+        .skip(limit * page)
+        .limit(limit);
+    } else {
+      queryProducts = Product.find({$and:[{title: { $regex: search, $options: "i" }},jsonstring,{tag:tag}]})
+        .skip(limit * page)
+        .limit(limit);
+    }
+
+    // sorting;
+    if (req.query.sort) {
+      const sortArray = req.query.sort.split(",");
+      const sortString = sortArray.join(" ");
+      queryProducts = queryProducts.sort(sortString);
+    }
+
+    const allProducts = await queryProducts;
+
+   
+
+    let total;
+
+    if (tag === "all") {
+      total = await  Product.countDocuments({$and:[{title: { $regex: search, $options: "i" }},jsonstring]})
+
+    } else {
+      total = await Product.countDocuments({$and:[{title: { $regex: search, $options: "i" }},jsonstring,{tag:tag}]})
+    }
+
     res.status(200).json({
-      succes: true,
+      success: true,
+      total,
+      pageNo: page + 1,
       data: allProducts,
     });
   } catch (err) {
-    res.send(err.name);
+    res.send(err);
   }
 };
 
 exports.getCategoryProduct = async (req, res) => {
   try {
-
     const category = req.params.category;
 
     const categoryProducts = await Product.find({ tag: category });
@@ -71,12 +130,14 @@ exports.getCategoryProduct = async (req, res) => {
 
 exports.getProductDetails = async (req, res) => {
   try {
-
     const id = req.params.id;
 
-    const productDetails = await Product.find({ _id: id }).populate("listedBy", "name email mobile")
+    const productDetails = await Product.find({ _id: id }).populate(
+      "listedBy",
+      "name email mobile"
+    );
 
-    console.log(productDetails)
+    console.log(productDetails);
 
     res.status(200).json({
       succes: true,
